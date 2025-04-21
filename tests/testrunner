@@ -1,0 +1,106 @@
+#!/bin/bash
+
+function parse_nreports {
+  [[ -z "${1}" ]] && return
+
+  echo "$(sed -rn '2s/^# ([0-9]+)/\1/p' "${1}")"
+}
+
+function compare_reports {
+  [[ -z "${1}" ]] && return
+  [[ -z "${2}" ]] && return
+
+  IFS=$'\n' read -a reports -d "" <<< "$(sed -rn '3,$s/^# (.*)/\1/p' "${1}")"
+
+  local -n output="${2}"
+  [[ "${#output[@]}" -ne "${#reports[@]}" ]] && echo "FAIL" && return 1
+
+  echo OK
+}
+
+function print_output {
+  [[ -z "${1}" ]] && return
+
+  local -n output="${1}"
+  [[ "${#output[@]}" -eq 0 ]] && echo "No reports" && return
+
+  echo "Reports:"
+  for line in "${output[@]}"
+  do
+    echo -ne "${line}"
+  done
+  echo
+}
+
+export PATH="${PATH}:$(pwd)"
+
+function main {
+  local dir="${1%/}"
+
+  if [[ -n "${2}" ]]
+  then
+    local exe="$(realpath ${2})"
+  else
+    local exe="gdblint"
+  fi
+  
+  [[ -z "${dir}" ]] && echo "testsuite directory not provided" && exit 1
+  
+  (
+    [[ -x "${exe}" ]] || \
+      (
+        goal="$(basename ${exe})" &&
+        echo -e "Building ${goal}\n" && \
+        make "${goal}" && \
+        echo -e "\nBuild done\n"
+      )
+  ) || \
+    exit 1
+
+  local total=0
+  local passed=0
+  
+  echo "Testsuite directory: ${dir}"
+  echo
+  echo "--------------------------------------------------------------------------------"
+  echo
+  
+  for file in ${dir}/*
+  do
+    [[ ! "${file}" == *".gdb" ]] && continue
+
+    ((total++))
+    echo "Testing ${file}"
+    echo
+  
+    if [[ -f "${file}" ]]
+    then
+      eval "$("${exe}" -s "${file}")"
+  
+      print_output GDBLINT_REPORTS
+  
+      local nreports="$(parse_nreports "${file}")"
+  
+      local pass=0
+  
+      ([[ "${GDBLINT_NREPORTS}" -ne "${nreports}" ]] && \
+        echo "Generated ${GDBLINT_NREPORTS} reports, expected ${nreports}") || pass=1
+  
+      echo -n "Comparing reports: "
+      compare_reports "${file}" GDBLINT_REPORTS
+      [[ "${?}" -ne 0 ]] && pass=0 || ((passed++))
+  
+      ([[ "${pass}" -eq 0 ]] && echo "FAILED") || echo "PASSED"
+    fi
+  
+    echo
+    echo "--------------------------------------------------------------------------------"
+    echo
+  done
+  
+  echo "${passed} tests passed"
+  
+  [[ "${passed}" -eq "${total}" ]] && exit 0 || exit 1
+}
+
+main "${1}" "${2}"
