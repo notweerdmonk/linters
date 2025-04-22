@@ -424,6 +424,34 @@ char* strntok(char *str, size_t len, const char* delim, size_t dlen) {
   return ret;
 }
 
+char* strncatn(char *dest, size_t dlen, const char *src, size_t slen) {
+  if (!dest || !dlen) {
+    return NULL;
+  }
+  if (!src || !slen) {
+    return dest;
+  }
+
+  char *destcpy = dest;
+  size_t didx = 0, sidx = 0;
+
+  while (didx++ < dlen && destcpy && *destcpy) {
+    ++destcpy;
+  }
+
+  if (!destcpy) {
+    return NULL;
+  }
+
+  for (; didx++ < dlen && sidx++ < slen && destcpy && src && *src;) {
+    *destcpy++ = *src++;
+  }
+
+  destcpy && (*destcpy = '\0');
+
+  return dest;
+}
+
 ssize_t getline_e(char **lineptr, size_t* len, FILE *stream,
     int *local_errno) {
 
@@ -520,6 +548,8 @@ progname(const char *name) {
   }
   return __progname;
 }
+
+/* Hash map */
 
 static
 void
@@ -1028,7 +1058,6 @@ load_gdb_commands(struct progdata *pdata) {
       ptr = indexn(ptr, ',', nread);
       dbg("ptr for ',': %s\n", ptr);
       if (!ptr) {
-        //ptr = strtok(buffer, " ");
         ptr = strntok(buffer, strlen(buffer), " ", strlen(" "));
         dbg("parsed command: %s\n", ptr);
         //if (!find_symbol(&pdata->cmds, ptr, FUNC)) {
@@ -1107,7 +1136,6 @@ load_gdb_convenience_vars(struct progdata *pdata) {
         continue;
       }
 
-      //const char *ptr = strtok(buffer + 1, ", \t\n");
       const char *ptr =
         strntok(buffer + 1, strlen(buffer + 1), ", \t\n", strlen(", \t\n"));
       if (ptr) {
@@ -1336,10 +1364,10 @@ preprocess_lines(struct progdata *pdata, FILE *fp) {
 
     if (len > 1 && buffer[len - 2] == '\\') {
       buffer[len - 2] = '\0';
-      strncat(current_line, buffer, len);
+      strncatn(current_line, sizeof(current_line), buffer, len);
 
     } else {
-      strncat(current_line, buffer, len);
+      strncatn(current_line, sizeof(current_line), buffer, len);
       insert_line(&pdata->linemap, current_line, orig_linenum);
       current_line[0] = '\0';
     }
