@@ -37,19 +37,29 @@ export PATH="${PATH}:$(pwd)"
 function main {
   local dir="${1%/}"
 
+  [[ -z "${dir}" ]] && echo "testsuite directory not provided" && exit 1
+
+  local make_goal="bin/gdblint"
+
   if [[ -n "${2}" ]]
   then
-    local exe="$(realpath ${2})"
+    local exe="$(realpath -m ${2})"
+
+    [[ "${2}" == "${make_goal}" ]] || \
+      {
+        [[ -n "${exe}" && ! -x "${exe}" ]] && \
+        echo "Executable ${exe}"" not found" && \
+        local exe="$(realpath -m ./bin/gdblint)" && \
+        echo -e "Using ""${exe}\n"
+      }
   else
-    local exe="gdblint"
+    local exe="$(realpath -m ./bin/gdblint)"
   fi
-  
-  [[ -z "${dir}" ]] && echo "testsuite directory not provided" && exit 1
-  
+
   (
     [[ -x "${exe}" ]] || \
       (
-        goal="$(basename ${exe})" &&
+        goal="bin/gdblint" &&
         echo -e "Building ${goal}\n" && \
         make "${goal}" && \
         echo -e "\nBuild done\n"
@@ -59,12 +69,12 @@ function main {
 
   local total=0
   local passed=0
-  
+
   echo "Testsuite directory: ${dir}"
   echo
   echo "--------------------------------------------------------------------------------"
   echo
-  
+
   for file in ${dir}/*
   do
     [[ ! "${file}" == *".gdb" ]] && continue
@@ -72,34 +82,34 @@ function main {
     ((total++))
     echo "Testing ${file}"
     echo
-  
+
     if [[ -f "${file}" ]]
     then
       eval "$("${exe}" -s "${file}")"
-  
+
       print_output GDBLINT_REPORTS
-  
+
       local nreports="$(parse_nreports "${file}")"
-  
+
       local pass=0
-  
+
       ([[ "${GDBLINT_NREPORTS}" -ne "${nreports}" ]] && \
         echo "Generated ${GDBLINT_NREPORTS} reports, expected ${nreports}") || pass=1
-  
+
       echo -n "Comparing reports: "
       compare_reports "${file}" GDBLINT_REPORTS
       [[ "${?}" -ne 0 ]] && pass=0 || ((passed++))
-  
+
       ([[ "${pass}" -eq 0 ]] && echo "FAILED") || echo "PASSED"
     fi
-  
+
     echo
     echo "--------------------------------------------------------------------------------"
     echo
   done
-  
+
   echo "${passed} tests passed"
-  
+
   [[ "${passed}" -eq "${total}" ]] && exit 0 || exit 1
 }
 
