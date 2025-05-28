@@ -33,7 +33,7 @@ function print_output {
 }
 
 function capture_stderr {
-  "${@}" 1>&2
+  "${@}" >&2
 }
 
 export PATH="${PATH}:$(pwd)"
@@ -90,7 +90,7 @@ function main {
 
     if [[ -f "${file}" ]]
     then
-      out=$(capture_stderr "${exe}" -s "${file}" 2>&1 )
+      out=$("${exe}" -s "${file}" |& cat)
       echo "${out}"
       eval "${out}"
 
