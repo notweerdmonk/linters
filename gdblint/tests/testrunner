@@ -75,6 +75,8 @@ function main {
   echo "--------------------------------------------------------------------------------"
   echo
 
+  "${exe}" --help
+
   for file in ${dir}/*
   do
     [[ ! "${file}" == *".gdb" ]] && continue
