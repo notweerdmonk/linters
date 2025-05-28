@@ -91,7 +91,7 @@ function main {
     then
       "${dir}""/testrunner"
       "${dir}""/unit/bin/hashmap"
-      "${exe}" -l
+      0<&- "${exe}" -l
       printf "%s\n" "debug"
       "${exe}" "${file}" 
       "${exe}" "${file}" |& cat
