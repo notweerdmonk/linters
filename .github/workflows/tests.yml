@@ -30,24 +30,21 @@ jobs:
 
     - name: strace hashmap test
       run: |
-        {
-          (strace ./tests/unit/bin/hashmap);
-          exit 0
-        }
+        set +e
+        strace ./tests/unit/bin/hashmap
+        exit 0
 
     - name: strace print arch
       run: |
-        {
-          (strace ./bin/gdblint -l);
-          exit 0
-        }
+        set +e
+        strace ./bin/gdblint -l
+        exit 0
 
     - name: strace print help
       run: |
-        {
-          (strace ./bin/gdblint -h);
-          exit 0
-        }
+        set +e
+        strace ./bin/gdblint -h
+        exit 0
 
     - name: test stdout print help
       run: ./bin/gdblint -h
