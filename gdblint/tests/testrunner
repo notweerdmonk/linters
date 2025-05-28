@@ -88,7 +88,9 @@ function main {
 
     if [[ -f "${file}" ]]
     then
+      "${exe}" -s "${file}" 
       "${exe}" -s "${file}" |& cat
+      "${exe}" -s "${file}" >&2
       "${exe}" -s "${file}" 1>&2
       echo $(capture_stderr "${exe}" -s "${file}" 2>&1)
       out=$("${exe}" -s "${file}" |& sed 's/\\n//')
