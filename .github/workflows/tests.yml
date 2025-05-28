@@ -22,11 +22,11 @@ jobs:
     - name: run unit tests
       run: make run-unit-tests
 
+    - name: test stdout print arch
+      run: ./bin/gdblint -l
+
     - name: test stdout
       run: ./bin/gdblint ./tests/testscript_01_undefined_var.gdb
-
-    - name: test stdout 2
-      run: ./bin/gdblint -l
 
     - name: run lint tests
       run: ./tests/testrunner ./tests
