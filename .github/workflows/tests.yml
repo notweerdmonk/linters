@@ -25,6 +25,11 @@ jobs:
     - name: install strace
       run: sudo apt install -y strace
 
+    - name: strace print help
+      run: |
+        strace ./bin/gdblint -h;
+        exit 0
+
     - name: strace print arch
       run: strace ./bin/gdblint -l
 
