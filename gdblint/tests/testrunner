@@ -86,7 +86,7 @@ function main {
 
     if [[ -f "${file}" ]]
     then
-      out="$("${exe}" -s "${file}")" 1>&2
+      out="$("${exe}" -s "${file}" 1>&2 )"
       echo "${out}"
       eval "${out}"
 
