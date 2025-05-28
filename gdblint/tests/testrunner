@@ -87,12 +87,11 @@ function main {
     if [[ -f "${file}" ]]
     then
       echo "${exe}" -s "${file}"
-      #eval "$("${exe}" -s "${file}")"
-      "${exe}" -s "${file}"
+      "${exe}" -s "${file}" 2>&1
       echo "$("${exe}" -s "${file}")"
-
       echo "${GDBLINT_REPORTS}"
       echo "${GDBLINT_NREPORTS}"
+      #eval "$("${exe}" -s "${file}")"
 
       print_output GDBLINT_REPORTS
 
