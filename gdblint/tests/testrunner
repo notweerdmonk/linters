@@ -86,6 +86,8 @@ function main {
 
     if [[ -f "${file}" ]]
     then
+      ls -l "${exe}"
+      ls -l "${file}"
       echo "${exe}" -s "${file}"
       out="$("${exe}" -s "${file}")"
       echo "${out}"
