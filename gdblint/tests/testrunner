@@ -90,7 +90,7 @@ function main {
 
     if [[ -f "${file}" ]]
     then
-      out=$(capture_stderr "${exe}" -s "${file}")
+      out=$(capture_stderr "${exe}" -s "${file}" 2>&1 )
       echo "${out}"
       eval "${out}"
 
