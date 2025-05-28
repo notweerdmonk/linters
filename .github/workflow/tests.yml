@@ -5,9 +5,12 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
-
+  gdblint:
+    name: build and test gdblint
     runs-on: ubuntu-latest
+
+    defaults:
+      working-direcotry: ./gdblint
 
     steps:
     - uses: actions/checkout@v4
