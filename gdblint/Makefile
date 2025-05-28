@@ -1,38 +1,58 @@
 # Makefile for gdblint
 
 .DEFAULT_GOAL = all
-.ONESHELL:
 
 CC ?= gcc
 STRIP := strip
 
-ifeq ($(INCLUDE_DIR),)
-INCLUDE_DIR := .
+C_VERSION_FLAGS := -std=c11
+
+INCLUDE_DIRS := $(shell pwd)
+
+ifneq ($(INCLUDE_DIR),)
+INCLUDE_DIRS += $(INCLUDE_DIR)
 endif
 
 ifeq ($(SRC_DIR),)
-SRC_DIR := src
+SRC_DIR := $(shell pwd)/src
 endif
 
 ifeq ($(BIN_DIR),)
-BIN_DIR := bin
+BIN_DIR := $(shell pwd)/bin
 endif
 
 ifeq ($(TESTS_DIR),)
-TESTS_DIR := ./tests
+TESTS_DIR := $(shell pwd)/tests
 endif
 
-HEADERS := $(wildcard $(INCLUDE_DIR)/*.h)
-SRCS := $(wildcard $(SRC_DIR)/*.c)
-OBJS := $(SRCS:.c=.o)
-ELFS := $(foreach obj, $(OBJS:.o=), $(BIN_DIR)/$(notdir $(obj)))
-INCLUDES := $(foreach header, $(HEADERS), -I$(header))
+ifeq ($(UNIT_TESTS_DIR),)
+UNIT_TESTS_DIR := $(shell pwd)/tests/unit
+endif
 
-CFLAGS := -Wall -Wextra -Wpedantic -Wno-implicit-fallthrough
+ifeq ($(UNIT_TESTS_BIN_DIR),)
+UNIT_TESTS_BIN_DIR := $(shell pwd)/tests/unit/bin
+endif
+
+WARNINGS := -Wall -Wextra -Wpedantic -Werror
+ERRORS :=
+
+WARNING_IGNORES := -Wno-implicit-fallthrough
+ERROR_IGNORES :=
+
+CFLAGS := $(C_VERSION_FLAGS) $(WARNINGS) $(WARNING_IGNORES) $(ERRORS) $(ERROR_IGNORES)
 
 STRIP_OPTS := -s -R .comment
 
 STRIP_CMD = $(STRIP) $(STRIP_OPTS)
+
+# Build configuration
+ifneq ($(cfg-hashmap-chk-duplicates),)
+CFLAGS += -DCFG_HASHMAP_CHK_DUPLICATES
+endif
+
+ifneq ($(cfg_hashmap_chk_duplicates),)
+CFLAGS += -DCFG_HASHMAP_CHK_DUPLICATES
+endif
 
 ifneq (,$(filter-out , $(release) $(RELEASE)))
 	CFLAGS += -O3 -D__RELEASE
@@ -50,71 +70,51 @@ else ifneq ($(log),)
 	CFLAGS += -D__LOG=$(log)
 endif
 
-exe ?= $(shell pwd)/$(TARGET)
+exe ?= $(TARGET)
 
 testexe ?= $(abspath $(TESTS_DIR))/testrunner
 
-./%.o: ./%.c $(HEADERS)
-	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $< $(LDFLAGS)
-
-.PHONY = all clean strip test format valgrind help
+.PHONY = all clean strip unit-tests run-unit-tests test format valgrind help
 
 TARGET_NAME := gdblint
 
 TARGET = $(BIN_DIR)/$(TARGET_NAME)
 
-$(TARGET): $(OBJS) $(SRCS) $(HEADERS)
-	@mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(OBJS) $(LDFLAGS)
+$(TARGET):
+	$(MAKE) -C $(SRC_DIR)
 
-all: $(RELEASE_TARGET) $(TARGET) $(ELFS) $(OBJS) $(SRCS) $(HEADERS)
+all: $(TARGET) $(RELEASE_TARGET) unit-tests
 
 clean:
-	rm -f $(ELFS) $(OBJS)
-	rm -rf $(BIN_DIR)
+	$(MAKE) -C $(SRC_DIR) clean
+	$(MAKE) -C $(UNIT_TESTS_DIR) clean
 
-strip: $(TARGET) $(ELFS)
-	$(STRIP_CMD) $(exe)
+strip: $(TARGET)
+	$(MAKE) -C $(SRC_DIR) strip
+
+unit-tests:
+	$(MAKE) -C $(UNIT_TESTS_DIR)
+
+run-unit-tests:
+	@if [ ! -d "$(UNIT_TESTS_BIN_DIR)" ]; then echo "run make unit-tests"; exit 1; fi
+	@$(MAKE) -C $(UNIT_TESTS_DIR) test
 
 test: $(TARGET) $(exe) $(testexe)
-	@$(testexe) $(TESTS_DIR) $(exe)
+	$(testexe) $(TESTS_DIR) $(exe)
 
-ASTYLE := $(shell command -v astyle 2>/dev/null)
-
-format: $(ASTYLE)
-	@if [ -z "$(ASTYLE)" ]; then echo "astyle not found"; exit 1; fi
-	$(ASTYLE) --style=google \
-		--indent=spaces=2 --indent-switches \
-		--max-code-length=80 \
-		--add-braces \
-		--break-return-type \
-		--break-return-type-decl \
-		--break-after-logical \
-		--convert-tabs \
-		$(SRCS)
-
-VALGRIND := $(shell command -v valgrind 2>/dev/null)
+format:
+	$(MAKE) -C $(SRC_DIR) format
 
 valgrind: $(VALGRIND) $(GDBLINT)
-	@if [ -z "$(VALGRIND)" ]; then echo "valgrind not found"; exit 1; fi
-	@if [ -z "$(gdbfile)" ]; then echo "GDB script file not provided. Use \"$(MAKE) $@ exe=<path> gdbfile=<path>\""; exit 1; fi
-	@echo $(shell $(VALGRIND) -s \
-		--leak-check=full \
-		--show-leak-kinds=all \
-		--track-origins=yes \
-		--track-fds=yes \
-		--max-stackframe=5000000 \
-		$(exe) \
-		$(gdbfile) 1>&2)
-	@$(eval retcode=$(.SHELLSTATUS))
-	@echo make valgrind: $(notdir $(exe)) exited with code ${retcode}
+	$(MAKE) -C $(SRC_DIR) valgrind
 
+BIN_TARGET := $(notdir $(TARGET))
 help:
-	@echo "$(TARGET) build options"
+	@echo "$(BIN_TARGET) build options"
 	@echo
 	@echo "GOALS"
-	@echo "\t$(TARGET)"
-	@echo "\t\tBuild $(TARGET) executable with intermediates"
+	@echo "\t$(BIN_TARGET)"
+	@echo "\t\tBuild $(BIN_TARGET) executable with intermediates"
 	@echo "\tall"
 	@echo "\t\tBuild all executables with intermediates"
 	@echo "\tclean"
@@ -124,13 +124,13 @@ help:
 	@echo "\t\tRemove all symbols and unecessary sections"
 	@echo
 	@echo "\t\tVARIABLES"
-	@echo "\t\texe\t\tExecutable to strip, $(TARGET) is set by default"
+	@echo "\t\texe\t\tExecutable to strip, $(BIN_TARGET) is set by default"
 	@echo
 	@echo "\ttest exe=[PATH] testexe=[PATH]"
 	@echo "\t\tRun the testsuite on exe with testexe"
 	@echo
 	@echo "\t\tVARIABLES"
-	@echo "\t\texe\t\tExecutable to be tested by testexe, $(TARGET) is "
+	@echo "\t\texe\t\tExecutable to be tested by testexe, $(BIN_TARGET) is "
 	@echo "\t\t\t\tset by default"
 	@echo "\t\ttestexe\t\tExecutable used to run tests, testrunner is "
 	@echo "\t\t\t\tset by default"
@@ -139,7 +139,7 @@ help:
 	@echo "\t\tRun valgrind on an executable with a GDB script"
 	@echo
 	@echo "\t\tVARIABLES"
-	@echo "\t\texe\t\tExecutable to run valgrind on, $(TARGET) is set by"
+	@echo "\t\texe\t\tExecutable to run valgrind on, $(BIN_TARGET) is set by"
 	@echo "\t\t\t\tdefault"
 	@echo "\t\tgdbfile\t\tGDB script to pass to executable"
 	@echo
@@ -163,3 +163,9 @@ help:
 	@echo "\t3\tNormal logs"
 	@echo "\t>= 4\tDebug logs"
 	@echo
+	@echo "CONFIGURATION"
+	@echo "\tcfg_hashmap_chk_duplicates, cfg-hashmap-chk-duplicates"
+	@echo "\t\tEnable checking of duplicate entries in hash map"
+	@echo
+
+export

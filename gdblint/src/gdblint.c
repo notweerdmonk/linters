@@ -19,6 +19,7 @@
 
 /* Convenience */
 
+/* Mark a function or variable or function parameter as unused */
 #define UNUSED __attribute__(( unused ))
 
 /* Logstuff */
@@ -335,6 +336,16 @@ size_t deserialize_trie_from_file(struct trie_node *root, FILE* file) {
 }
 
 struct hash_map {
+/* 
+ * Define this macro to enable checking of duplicate entries in the hash map.
+ *
+ * CFG_HASHMAP_CHK_DUPLICATES 
+ *
+ */
+#ifdef CFG_HASHMAP_CHK_DUPLICATES 
+#define __HASHMAP_CHK_DUPLICATES 1
+#endif
+
   struct symbol *table[HASH_SIZE];
 };
 
@@ -539,6 +550,37 @@ const char* md5sum(const char *file) {
 #endif
 
 static
+const char*
+get_print_header(const char *progname) {
+  if (!progname) {
+    return NULL;
+  }
+
+  static char progheader[MAX_LEN] = "";
+
+  snprintf(progheader, sizeof(progheader), "%s - lint GDB scripts\n", progname);
+
+  return progheader;
+}
+
+static
+void
+print_arch(struct progdata *pdata) {
+  if (!pdata) {
+    return;
+  }
+
+  printf("ARCHITECTURES\n\tAvailabe GDB architectures\n\n");
+
+  for (size_t i = 0; i < MAX_ARCHS; ++i) {
+    (void)(
+        pdata->archlist[i][0] != '\0' &&
+        printf("\t%s\n", pdata->archlist[i])
+      );
+  }
+}
+
+static
 inline
 const char*
 progname(const char *name) {
@@ -644,6 +686,17 @@ insert_symbol(struct hash_map *map, const char *name, size_t linenum,
 
   unsigned int index = fnv1a(name);
 
+#ifdef __HASHMAP_CHK_DUPLICATES
+  for (struct symbol *p = map->table[index]; p; p = p->next) {
+    /* TODO: add name_len as parameter */
+    if (!strncmp(name, p->name, strlen(name)) &&
+        type == p->type &&
+        linenum == p->linenum) {
+      return;
+    }
+  }
+#endif
+
   struct symbol *entry = (struct symbol*)malloc(sizeof(struct symbol));
   if (!entry) {
     return;
@@ -663,14 +716,9 @@ find_symbol(struct hash_map *map, const char *name, enum symbol_type type) {
   unsigned int index = fnv1a(name);
 
   for (struct symbol *entry = map->table[index]; entry; entry = entry->next) {
-    if (strcmp(entry->name, name) != 0) {
+    if (strcmp(entry->name, name) || (type != NONE && type != entry->type)) {
       continue;
     }
-
-    if (type != NONE && type != entry->type) {
-      continue;
-    }
-
     return entry;
   }
 
@@ -1334,7 +1382,7 @@ calc_linenum_width(struct progdata *pdata) {
 
 static
 void
-preprocess_lines(struct progdata *pdata, FILE *fp) {
+parse_gdbfile(struct progdata *pdata, FILE *fp) {
   if (!pdata) {
     return;
   }
@@ -1645,35 +1693,147 @@ report_issues(struct progdata *pdata, struct args *pargs) {
   return ret;
 }
 
-static
 const char*
-get_print_header(const char *progname) {
-  if (!progname) {
+set_arch(struct progdata *pdata, char *arch) {
+  if (!pdata) {
+    return arch;
+  }
+
+  arch = (char*)get_system_arch(arch);
+
+  for (size_t i = 0; arch && i < MAX_ARCHS; ++i) {
+    if (strstr(pdata->archlist[i], arch)) {
+      arch = pdata->archlist[i];
+      break;
+    }
+  }
+
+  return arch;
+}
+
+FILE*
+get_gdbfp(const char *gdbfile) {
+  FILE *gdbfp = gdbfile ? fopen(gdbfile, "r") : stdin;
+  if (!gdbfp) {
+    err("fopen failed: %s\n", strerror(errno));
+    return NULL;
+  }
+  return gdbfp;
+}
+
+FILE*
+setup_cache(bool clear) {
+  static char cachefile[PATH_MAX] = "";
+  int length = snprintf(cachefile, sizeof(cachefile), "/home/%s/.cache/%s",
+      getenv("USER"), progname(NULL));
+  cachefile[length] = '\0';
+
+  if (clear) {
+    if (remove(cachefile)) {
+      err("remove failed for path: %s error: %s\n", cachefile, strerror(errno));
+      exit(EXIT_FAILURE);
+    }
+
+    printf("Definitions and commands cache has been removed\n");
+
+    exit(EXIT_SUCCESS);
+  }
+
+  FILE *cachefp = fopen(cachefile, "r+");
+  if (!cachefp && errno == ENOENT) {
+    cachefp = fopen(cachefile, "w+");
+  }
+  if (!cachefp) {
+    err("fopen failed: %s\n", strerror(errno));
     return NULL;
   }
 
-  static char progheader[MAX_LEN] = "";
-
-  snprintf(progheader, sizeof(progheader), "%s - lint GDB scripts\n", progname);
-
-  return progheader;
+  return cachefp;
 }
 
-static
-void
-print_arch(struct progdata *pdata) {
+bool
+load_gdb_data(struct progdata *pdata, char *arch, bool list) {
   if (!pdata) {
-    return;
+    return false;
   }
 
-  printf("ARCHITECTURES\n\tAvailabe GDB architectures\n\n");
+  bool loaded = false;
 
-  for (size_t i = 0; i < MAX_ARCHS; ++i) {
-    (void)(
-        pdata->archlist[i][0] != '\0' &&
-        printf("\t%s\n", pdata->archlist[i])
-      );
+  if (!(loaded = load_gdb_arch(MAX_ARCHS, pdata->archlist))) {
+    return loaded;
   }
+
+  if (list) {
+    printf("%s\n", get_print_header(progname(NULL)));
+    print_arch(pdata);
+    fputc('\n', stdout);
+
+    exit(EXIT_SUCCESS);
+  }
+
+  arch = (char*)set_arch(pdata, arch);
+  dbg("arch: %s\n", arch);
+
+  if (!(loaded = load_gdb_commands(pdata))) {
+    return loaded;
+  }
+  if (!(loaded = load_gdb_convenience_vars(pdata))) {
+    return loaded;
+  }
+  return (loaded = load_gdb_registers(pdata, arch));
+}
+
+size_t
+store_maps(struct progdata *pdata, FILE *fp, size_t *pndefs, size_t *pnrefs,
+    size_t *pncmds) {
+
+  if (!pdata || !fp) {
+    return 0;
+  }
+
+  size_t ndefs = 0, nrefs = 0, ncmds = 0;
+
+  size_t nstore =
+    (ndefs = store_map(&pdata->defs, "defs", sizeof("defs"), fp, NULL, 0));
+  dbg("nstore: %lu\n", nstore);
+  (void)(pndefs && (*pndefs = ndefs));
+
+  nstore +=
+    (nrefs = store_map(&pdata->refs, "refs", sizeof("refs"), fp, NULL, 0));
+  dbg("nstore: %lu\n", nstore);
+  (void)(pnrefs && (*pnrefs = nrefs));
+
+  //nstore +=
+  //  (ncmds = store_map(&pdata->cmds, "cmds", sizeof("cmds"), fp, NULL, 0));
+  //dbg("nstore: %lu\n", nstore);
+  //(void)(pncmds && (*pncmds = ncmds));
+  nstore +=
+    (ncmds = store_trie(pdata->cmds, fp, NULL, 0));
+  dbg("nstore: %lu\n", nstore);
+  (void)(pncmds && (*pncmds = ncmds));
+
+  return nstore;
+}
+
+size_t
+load_maps(struct progdata *pdata, FILE *fp, size_t ndefs, size_t nrefs,
+    size_t ncmds UNUSED) {
+
+  if (!pdata || !fp) {
+    return 0;
+  }
+
+  size_t nload =
+    load_map(&pdata->defs, "defs", sizeof("defs"), fp, NULL, ndefs);
+  dbg("nload: %lu\n", nload);
+
+  nload += load_map(&pdata->refs, "refs", sizeof("refs"), fp, NULL, nrefs);
+  dbg("nload: %lu\n", nload);
+
+  //nload += load_map(&pdata->cmds, "cmds", sizeof("cmds"), fp, NULL, ncmds);
+  //dbg("nload: %lu\n", nload);
+
+  return nload;
 }
 
 static
@@ -1823,148 +1983,7 @@ parse_args(int argc, char *argv[], struct progdata *pdata, struct args *pargs) {
   return EXIT_SUCCESS;
 }
 
-const char*
-set_arch(struct progdata *pdata, char *arch) {
-  if (!pdata) {
-    return arch;
-  }
-
-  arch = (char*)get_system_arch(arch);
-
-  for (size_t i = 0; arch && i < MAX_ARCHS; ++i) {
-    if (strstr(pdata->archlist[i], arch)) {
-      arch = pdata->archlist[i];
-      break;
-    }
-  }
-
-  return arch;
-}
-
-FILE*
-get_gdbfp(const char *gdbfile) {
-  FILE *gdbfp = gdbfile ? fopen(gdbfile, "r") : stdin;
-  if (!gdbfp) {
-    err("fopen failed: %s\n", strerror(errno));
-    return NULL;
-  }
-  return gdbfp;
-}
-
-FILE*
-setup_cache(bool clear) {
-  static char cachefile[PATH_MAX] = "";
-  int length = snprintf(cachefile, sizeof(cachefile), "/home/%s/.cache/%s",
-      getenv("USER"), progname(NULL));
-  cachefile[length] = '\0';
-
-  if (clear) {
-    if (remove(cachefile)) {
-      err("remove failed for path: %s error: %s\n", cachefile, strerror(errno));
-      exit(EXIT_FAILURE);
-    }
-
-    printf("Definitions and commands cache has been removed\n");
-
-    exit(EXIT_SUCCESS);
-  }
-
-  FILE *cachefp = fopen(cachefile, "r+");
-  if (!cachefp && errno == ENOENT) {
-    cachefp = fopen(cachefile, "w+");
-  }
-  if (!cachefp) {
-    err("fopen failed: %s\n", strerror(errno));
-    return NULL;
-  }
-
-  return cachefp;
-}
-
-bool
-load_gdb_data(struct progdata *pdata, char *arch, bool list) {
-  if (!pdata) {
-    return false;
-  }
-
-  bool loaded = false;
-
-  if (!(loaded = load_gdb_arch(MAX_ARCHS, pdata->archlist))) {
-    return loaded;
-  }
-
-  if (list) {
-    printf("%s\n", get_print_header(progname(NULL)));
-    print_arch(pdata);
-    fputc('\n', stdout);
-
-    exit(EXIT_SUCCESS);
-  }
-
-  arch = (char*)set_arch(pdata, arch);
-  dbg("arch: %s\n", arch);
-
-  if (!(loaded = load_gdb_commands(pdata))) {
-    return loaded;
-  }
-  if (!(loaded = load_gdb_convenience_vars(pdata))) {
-    return loaded;
-  }
-  return (loaded = load_gdb_registers(pdata, arch));
-}
-
-size_t
-store_maps(struct progdata *pdata, FILE *fp, size_t *pndefs, size_t *pnrefs,
-    size_t *pncmds) {
-
-  if (!pdata || !fp) {
-    return 0;
-  }
-
-  size_t ndefs = 0, nrefs = 0, ncmds = 0;
-
-  size_t nstore =
-    (ndefs = store_map(&pdata->defs, "defs", sizeof("defs"), fp, NULL, 0));
-  dbg("nstore: %lu\n", nstore);
-  (void)(pndefs && (*pndefs = ndefs));
-
-  nstore +=
-    (nrefs = store_map(&pdata->refs, "refs", sizeof("refs"), fp, NULL, 0));
-  dbg("nstore: %lu\n", nstore);
-  (void)(pnrefs && (*pnrefs = nrefs));
-
-  //nstore +=
-  //  (ncmds = store_map(&pdata->cmds, "cmds", sizeof("cmds"), fp, NULL, 0));
-  //dbg("nstore: %lu\n", nstore);
-  //(void)(pncmds && (*pncmds = ncmds));
-  nstore +=
-    (ncmds = store_trie(pdata->cmds, fp, NULL, 0));
-  dbg("nstore: %lu\n", nstore);
-  (void)(pncmds && (*pncmds = ncmds));
-
-  return nstore;
-}
-
-size_t
-load_maps(struct progdata *pdata, FILE *fp, size_t ndefs, size_t nrefs,
-    size_t ncmds UNUSED) {
-
-  if (!pdata || !fp) {
-    return 0;
-  }
-
-  size_t nload =
-    load_map(&pdata->defs, "defs", sizeof("defs"), fp, NULL, ndefs);
-  dbg("nload: %lu\n", nload);
-
-  nload += load_map(&pdata->refs, "refs", sizeof("refs"), fp, NULL, nrefs);
-  dbg("nload: %lu\n", nload);
-
-  //nload += load_map(&pdata->cmds, "cmds", sizeof("cmds"), fp, NULL, ncmds);
-  //dbg("nload: %lu\n", nload);
-
-  return nload;
-}
+#ifndef CFG_UNIT_TESTS
 
 /* Main */
 
@@ -2037,7 +2056,7 @@ main(int argc, char *argv[]) {
     cachefp = NULL;
   }
 
-  preprocess_lines(&data, gdbfp);
+  parse_gdbfile(&data, gdbfp);
 
   extract_defs(&data);
   extract_refs(&data);
@@ -2046,6 +2065,7 @@ main(int argc, char *argv[]) {
 
   char numbuf[16] = { '0', '\0' };
   size_t w = 0;
+
   for (int copy = issues; copy; ++w, copy /= 10);
   if (w < sizeof(numbuf) - 1) {
     numbuf[w] = '\0';
@@ -2080,3 +2100,5 @@ main(int argc, char *argv[]) {
 
   return !issues ? EXIT_SUCCESS : EXIT_FAILURE;
 }
+
+#endif
