@@ -25,6 +25,13 @@ jobs:
     - name: install strace
       run: sudo apt install -y strace
 
+    - name: objdump gdblint
+      run: |
+        {
+          objdump -d ./bin/gdblint | grep -A 40 "<print_arch>:";
+          exit 0
+        }
+
     - name: strace hashmap test
       run: |
         {
