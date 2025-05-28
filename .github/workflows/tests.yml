@@ -22,6 +22,12 @@ jobs:
     - name: run unit tests
       run: make run-unit-tests
 
+    - name: install strace
+      run: sudo apt install -y strace
+
+    - name: strace print arch
+      run: strace /bin/gdblint -l
+
     - name: test stdout print help
       run: ./bin/gdblint -h
 
