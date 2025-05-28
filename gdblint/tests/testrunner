@@ -110,7 +110,7 @@ function main {
 
   echo "${passed} of "${total}" tests passed"
 
-  [[ "${passed}" -eq "${total}" ]] && exit 0 || exit 1
+  ([[ "${passed}" -eq "${total}" ]] && exit 0) || exit 1
 }
 
 main "${1}" "${2}"
