@@ -33,7 +33,7 @@ function print_output {
 }
 
 function capture_stderr {
-  "${@}" >&2
+  "${@}" 1>&2
 }
 
 function main {
@@ -88,6 +88,9 @@ function main {
 
     if [[ -f "${file}" ]]
     then
+      echo debug
+      echo debug 1>&2
+      echo debug >&2
       "${exe}" -s "${file}" 
       "${exe}" -s "${file}" |& cat
       "${exe}" -s "${file}" >&2
