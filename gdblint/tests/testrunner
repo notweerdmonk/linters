@@ -90,7 +90,7 @@ function main {
 
     if [[ -f "${file}" ]]
     then
-      eval "$(capture_stderr "${exe}" -s "${file}" 2>&1)"
+      eval "$(capture_stderr "${exe}" -s "${file}")"
 
       print_output GDBLINT_REPORTS
 
