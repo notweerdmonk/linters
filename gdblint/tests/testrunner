@@ -36,8 +36,6 @@ function capture_stderr {
   "${@}" >&2
 }
 
-export PATH="${PATH}:$(pwd)"
-
 function main {
   local dir="${1%/}"
 
