@@ -75,9 +75,6 @@ function main {
   echo "--------------------------------------------------------------------------------"
   echo
 
-  "${exe}" --help
-  "${exe}" -s ../tests/testscript_01_undefined_var.gdb
-
   for file in ${dir}/*
   do
     [[ ! "${file}" == *".gdb" ]] && continue
@@ -89,18 +86,7 @@ function main {
 
     if [[ -f "${file}" ]]
     then
-      ls -l "${exe}"
-      ls -l "${file}"
-      echo "${exe}" -s "${file}"
-
-      "${exe}" -s "${file}"
-      "${exe}" "${file}"
-      out="$("${exe}" -s "${file}")"
-      echo "${out}"
-      eval "${out}"
-      echo "${GDBLINT_REPORTS}"
-      echo "${GDBLINT_NREPORTS}"
-      #eval "$("${exe}" -s "${file}")"
+      eval "$("${exe}" -s "${file}" 1>&2)"
 
       print_output GDBLINT_REPORTS
 
