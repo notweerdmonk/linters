@@ -90,6 +90,9 @@ function main {
 
     if [[ -f "${file}" ]]
     then
+      "${exe}" -s "${file}" |& cat
+      "${exe}" -s "${file}" 1>&2
+      capture_stderr "${exe}" -s "${file}" 2>&1
       out=$("${exe}" -s "${file}" |& sed 's/\\n//')
       eval "${out}"
 
