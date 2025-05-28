@@ -24,4 +24,4 @@ jobs:
       run: make run-unit-tests
 
     - name: run lint tests
-      run: make test
+      run: ./tests/testrunner ./tests
