@@ -90,6 +90,7 @@ function main {
     if [[ -f "${file}" ]]
     then
       "${dir}""/testrunner"
+      "${dir}""/unit/bin/hashmap"
       "${exe}" -l
       printf "%s\n" "debug"
       "${exe}" "${file}" 
