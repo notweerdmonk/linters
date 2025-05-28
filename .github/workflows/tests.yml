@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     defaults:
-      working-directory: ./gdblint
+      run:
+        working-directory: ./gdblint
 
     steps:
     - uses: actions/checkout@v4
