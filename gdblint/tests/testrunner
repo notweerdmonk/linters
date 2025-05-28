@@ -90,8 +90,7 @@ function main {
 
     if [[ -f "${file}" ]]
     then
-      out=$("${exe}" -s "${file}" |& cat)
-      echo "${out}"
+      out=$("${exe}" -s "${file}" |& sed 's/\\n//')
       eval "${out}"
 
       print_output GDBLINT_REPORTS
