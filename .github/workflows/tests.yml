@@ -22,5 +22,8 @@ jobs:
     - name: run unit tests
       run: make run-unit-tests
 
+    - name: test stdout
+      run: ./bin/gdblint ./tests/testscrit_01_undefined_var.gdb
+
     - name: run lint tests
       run: ./tests/testrunner ./tests
