@@ -89,6 +89,7 @@ function main {
 
     if [[ -f "${file}" ]]
     then
+      printf "%s\n" "debug"
       echo debug
       echo debug 1>&2
       echo debug >&2
