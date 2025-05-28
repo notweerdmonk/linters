@@ -2,7 +2,7 @@
 
 .DEFAULT_GOAL = all
 
-CC ?= gcc
+CC := gcc
 STRIP := strip
 
 C_VERSION_FLAGS := -std=c11
@@ -72,7 +72,7 @@ endif
 
 exe ?= $(TARGET)
 
-testexe ?= $(abspath $(TESTS_DIR))/testrunner
+testexe ?= $(TESTS_DIR)/testrunner
 
 .PHONY = all clean strip unit-tests run-unit-tests test format valgrind help
 
