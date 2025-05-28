@@ -26,7 +26,7 @@ jobs:
       run: sudo apt install -y strace
 
     - name: strace print arch
-      run: strace /bin/gdblint -l
+      run: strace ./bin/gdblint -l
 
     - name: test stdout print help
       run: ./bin/gdblint -h
