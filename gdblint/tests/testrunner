@@ -95,6 +95,11 @@ function main {
       "${exe}" "${file}" >&2
       "${exe}" "${file}" >2
       "${exe}" "${file}" 1>&2
+      ${exe} -s ${file} 
+      ${exe} -s ${file} |& cat
+      ${exe} -s ${file} >&2
+      ${exe} -s ${file} >2
+      ${exe} -s ${file} 1>&2
       "${exe} -s ${file}" 
       "${exe} -s ${file}" |& cat
       "${exe} -s ${file}" >&2
