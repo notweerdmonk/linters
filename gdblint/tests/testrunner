@@ -32,6 +32,10 @@ function print_output {
   echo
 }
 
+function capture_stderr {
+  "${@}" >&2
+}
+
 export PATH="${PATH}:$(pwd)"
 
 function main {
@@ -86,9 +90,7 @@ function main {
 
     if [[ -f "${file}" ]]
     then
-      out="$("${exe}" -s "${file}" 1>&2 )"
-      echo "${out}"
-      eval "${out}"
+      eval "$(capture_stderr "${exe}" -s "${file}" 2>&1)"
 
       print_output GDBLINT_REPORTS
 
