@@ -78,6 +78,7 @@ function main {
   for file in ${dir}/*
   do
     [[ ! "${file}" == *".gdb" ]] && continue
+    file="$(realpath "${file}")"
 
     ((total++))
     echo "Testing ${file}"
@@ -86,6 +87,9 @@ function main {
     if [[ -f "${file}" ]]
     then
       eval "$("${exe}" -s "${file}")"
+
+      echo "${GDBLINT_REPORTS}"
+      echo "${GDBLINT_NREPORTS}"
 
       print_output GDBLINT_REPORTS
 
