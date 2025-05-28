@@ -33,7 +33,7 @@ function print_output {
 }
 
 function capture_stderr {
-  "${@}" >&2
+  "${@}" 1>&2
 }
 
 export PATH="${PATH}:$(pwd)"
