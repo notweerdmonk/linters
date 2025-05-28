@@ -108,7 +108,7 @@ function main {
     echo
   done
 
-  echo "${passed} tests passed"
+  echo "${passed} of "${total}" tests passed"
 
   [[ "${passed}" -eq "${total}" ]] && exit 0 || exit 1
 }
