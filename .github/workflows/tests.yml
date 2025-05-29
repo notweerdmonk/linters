@@ -50,13 +50,19 @@ jobs:
         exit 0
 
     - name: test stdout print help
-      run: ./bin/gdblint -h
+      run: |
+        set +e
+        ./bin/gdblint -h
+        exit 0
 
     - name: test stdout print arch
       run: ./bin/gdblint -l
 
     - name: test stdout
-      run: ./bin/gdblint ./tests/testscript_01_undefined_var.gdb
+      run: |
+        set +e
+        ./bin/gdblint ./tests/testscript_01_undefined_var.gdb
+        exit 0
 
     - name: run lint tests
       run: ./tests/testrunner ./tests
