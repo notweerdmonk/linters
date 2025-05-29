@@ -13,6 +13,7 @@
 #include <stdbool.h>
 #include <limits.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <getopt.h>
 #include <libgen.h>
 #include <sys/utsname.h>
@@ -1730,8 +1731,14 @@ setup_cache(bool clear) {
   cachefile[length] = '\0';
 
   if (access(cachefile, R_OK | W_OK | X_OK)) {
-    err("access failed for path: %s error: %s\n", cachefile, strerror(errno));
-    exit(EXIT_FAILURE);
+    if (errno != ENOENT) {
+      err("access failed for path: %s error: %s\n", cachefile, strerror(errno));
+      exit(EXIT_FAILURE);
+    }
+    if (mkdir(cachefile, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) {
+      err("mkdir failed for path: %s error: %s\n", cachefile, strerror(errno));
+      exit(EXIT_FAILURE);
+    }
   }
 
   length = snprintf(cachefile, sizeof(cachefile) - length, "%s", progname(NULL));
