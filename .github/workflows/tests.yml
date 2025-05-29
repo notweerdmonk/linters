@@ -16,6 +16,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: install gdb
+      run: sudo apt install -y gdb
+
     - name: make
       run: make
 
