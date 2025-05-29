@@ -1,3 +1,4 @@
+#!/bin/bash
 #
 # Copyright (C) 2025  notweerdmonk
 #
@@ -14,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-#!/bin/bash
 
 function parse_nreports {
   [[ -z "${1}" ]] && return
