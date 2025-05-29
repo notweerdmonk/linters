@@ -1,3 +1,4 @@
+#include <src/gdblint.c>
 #include <assert.h>
 
 #define TEST_CASE(description, condition, message) \

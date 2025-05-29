@@ -36,7 +36,7 @@ STRIP_CMD = $(STRIP) $(STRIP_OPTS)
 .PHONY = all clean strip test format valgrind
 
 ./%.o: ./%.c $(HEADERS)
-	$(CC) $(CFLAGS) $(INCLUDES) -I $(SRC_DIR) -include gdblint.c  -c -o $@ $< $(LDFLAGS)
+	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $< $(LDFLAGS)
 
 $(ELFS): $(OBJS) $(SRCS) $(HEADERS)
 	mkdir -p $(UNIT_TEST_BIN_DIR)
