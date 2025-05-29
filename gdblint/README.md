@@ -7,6 +7,51 @@ WIP[^2]
 Install gdb[^1]. The program relies on gdb output for creating syntax lookup."
 
 ```console
+gdblint - lint GDB scripts
+
+USAGE
+        gdblint [OPTIONS] [FILE]
+
+DESCRIPTION
+        Lints a GDB script. Reads file contents from the standard input if
+        file path is not provided as final argument.
+
+OPTIONS
+        -s, --script
+                Enable bash friendly output
+        -c, --clear
+                Clear the defs and commands cache
+        -l, --list
+                List architectures available with GDB
+        -a, --arch
+                Specify the architecture to use
+        --wno-unused
+                Disable warnings for unused functions and variables
+        --wno-unused-function
+                Disable warnings for unused functions
+        --wno-unused-variable
+                Disable warnings for unused variables
+        --wno-undefined
+                Disable warnings for undefined functions and variables
+        --wno-undefined-function
+                Disable warnings for undefined functions
+        --wno-undefined-variable
+                Disable warnings for undefined variables
+ARCHITECTURES
+        Availabe GDB architectures
+
+        i386
+        i386:x86-64
+        i386:x64-32
+        i8086
+        i386:intel
+        i386:x86-64:intel
+        i386:x64-32:intel
+        auto
+
+```
+
+```console
 $ ./bin/gdblint ./tests/testscript_01_undefined_var.gdb
 testscript_01_undefined_var.gdb:04: Undefined var: 'undefined_var' is referenced at line 4 but never defined
 File: /home/runner/work/linters/linters/gdblint/tests/testscript_01_undefined_var.gdb
