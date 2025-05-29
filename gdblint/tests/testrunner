@@ -89,33 +89,7 @@ function main {
 
     if [[ -f "${file}" ]]
     then
-      "${dir}""/testrunner"
-      "${dir}""/unit/bin/hashmap"
-      0<&- "${exe}" -l
-      printf "%s\n" "debug"
-      "${exe}" "${file}" 
-      "${exe}" "${file}" |& cat
-      "${exe}" "${file}" >&2
-      "${exe}" "${file}" >2
-      "${exe}" "${file}" 1>&2
-      ${exe} -s ${file} 
-      ${exe} -s ${file} |& cat
-      ${exe} -s ${file} >&2
-      ${exe} -s ${file} >2
-      ${exe} -s ${file} 1>&2
-      "${exe} -s ${file}" 
-      "${exe} -s ${file}" |& cat
-      "${exe} -s ${file}" >&2
-      "${exe} -s ${file}" >2
-      "${exe} -s ${file}" 1>&2
-      "${exe}" -s "${file}" 
-      "${exe}" -s "${file}" |& cat
-      "${exe}" -s "${file}" >&2
-      "${exe}" -s "${file}" >2
-      "${exe}" -s "${file}" 1>&2
-      echo $(capture_stderr "${exe}" -s "${file}" 2>&1)
-      out=$("${exe}" -s "${file}" |& sed 's/\\n//')
-      eval "${out}"
+      eval "$("${exe}" -s "${file}" >&2)"
 
       print_output GDBLINT_REPORTS
 
