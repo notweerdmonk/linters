@@ -89,7 +89,7 @@ function main {
 
     if [[ -f "${file}" ]]
     then
-      eval "$("${exe}" -s "${file}" >&2)"
+      eval "$("${exe}" -s "${file}")"
 
       print_output GDBLINT_REPORTS
 
