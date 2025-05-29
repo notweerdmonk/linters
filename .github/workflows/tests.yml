@@ -35,16 +35,10 @@ jobs:
       run: objdump -d ./bin/gdblint | grep -A 40 "<print_help>:";
 
     - name: strace hashmap test
-      run: |
-        set +e
-        strace ./tests/unit/bin/hashmap
-        exit 0
+      run: strace ./tests/unit/bin/hashmap
 
     - name: strace print arch
-      run: |
-        set +e
-        strace ./bin/gdblint -l
-        exit 0
+      run: strace ./bin/gdblint -l
 
     - name: strace print help
       run: |
@@ -68,4 +62,4 @@ jobs:
         exit 0
 
     - name: run lint tests
-      run: ./tests/testrunner ./tests
+      run: make test
