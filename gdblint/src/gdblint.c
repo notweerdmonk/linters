@@ -12,6 +12,7 @@
 #include <regex.h>
 #include <stdbool.h>
 #include <limits.h>
+#include <unistd.h>
 #include <getopt.h>
 #include <libgen.h>
 #include <sys/utsname.h>
@@ -1724,9 +1725,16 @@ get_gdbfp(const char *gdbfile) {
 FILE*
 setup_cache(bool clear) {
   static char cachefile[PATH_MAX] = "";
-  int length = snprintf(cachefile, sizeof(cachefile), "/home/%s/.cache/%s",
-      getenv("USER"), progname(NULL));
+  int length = snprintf(cachefile, sizeof(cachefile), "/home/%s/.cache/",
+      getenv("USER"));
   cachefile[length] = '\0';
+
+  if (access(cachefile, R_OK | W_OK | X_OK)) {
+    err("access failed for path: %s error: %s\n", cachefile, strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+
+  length = snprintf(cachefile, sizeof(cachefile) - length, "%s", progname(NULL));
 
   if (clear) {
     if (remove(cachefile)) {
