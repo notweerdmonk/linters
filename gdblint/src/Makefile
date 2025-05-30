@@ -50,7 +50,7 @@ ERROR_IGNORES :=
 
 DEPENDANCY_FLAGS = -MT $(TARGET) -MMD -MP -MF $(DEPS_DIR)/$(notdir $*.d)
 
-CFLAGS += $(DEPENDANCY_FLAGS) -save-temps
+CFLAGS += $(DEPENDANCY_FLAGS)
 
 STRIP_OPTS := -s -R .comment
 
