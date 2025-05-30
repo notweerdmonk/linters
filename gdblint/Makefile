@@ -33,6 +33,10 @@ ifeq ($(SRC_DIR),)
 SRC_DIR := $(shell pwd)/src
 endif
 
+ifeq ($(DEPS_DIR),)
+DEPS_DIR := $(shell pwd)/deps
+endif
+
 ifeq ($(BIN_DIR),)
 BIN_DIR := $(shell pwd)/bin
 endif
@@ -48,6 +52,8 @@ endif
 ifeq ($(UNIT_TESTS_BIN_DIR),)
 UNIT_TESTS_BIN_DIR := $(shell pwd)/tests/unit/bin
 endif
+
+DEPS := $(wildcard $(DEPS_DIR)/*)
 
 WARNINGS := -Wall -Wextra -Wpedantic -Werror
 ERRORS :=
@@ -90,11 +96,14 @@ exe ?= $(TARGET)
 
 testexe ?= $(TESTS_DIR)/testrunner
 
-.PHONY = all clean strip unit-tests run-unit-tests test format valgrind help
-
 TARGET_NAME := gdblint
 
-TARGET = $(BIN_DIR)/$(TARGET_NAME)
+TARGET := $(BIN_DIR)/$(TARGET_NAME)
+
+.PHONY = all clean strip unit-tests run-unit-tests test format valgrind help
+
+$(DEPS):
+include $(DEPS)
 
 $(TARGET):
 	$(MAKE) -C $(SRC_DIR)

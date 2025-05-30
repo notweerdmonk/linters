@@ -27,12 +27,17 @@ ifeq ($(SRC_DIR),)
 SRC_DIR := .
 endif
 
+ifeq ($(DEPS_DIR),)
+DEPS_DIR := ../deps
+endif
+
 ifeq ($(BIN_DIR),)
 BIN_DIR := ../bin
 endif
 
 HEADERS := $(foreach dir, $(INCLUDE_DIRS), $(wildcard $(dir)/*.h))
 SRCS := $(wildcard $(SRC_DIR)/*.c)
+DEPS := $(foreach dep, $(SRCS:.c=.d), $(DEPS_DIR)/$(notdir $(dep)))
 OBJS := $(SRCS:.c=.o)
 ELFS := $(foreach obj, $(OBJS:.o=), $(BIN_DIR)/$(notdir $(obj)))
 INCLUDES := $(foreach dir, $(INCLUDE_DIRS), -I$(dir))
@@ -43,7 +48,9 @@ ERRORS :=
 WARNING_IGNORES := -Wno-implicit-fallthrough
 ERROR_IGNORES :=
 
-CFLAGS := $(C_VERSION_FLAGS) $(WARNINGS) $(WARNING_IGNORES) $(ERRORS) $(ERROR_IGNORES)
+DEPENDANCY_FLAGS = -MT $(TARGET) -MMD -MP -MF $(DEPS_DIR)/$(notdir $*.d)
+
+CFLAGS += $(DEPENDANCY_FLAGS) -save-temps
 
 STRIP_OPTS := -s -R .comment
 
@@ -58,8 +65,14 @@ exe ?= $(TARGET)
 
 .PHONY = all clean strip format valgrind
 
-./%.o: ./%.c $(HEADERS)
-	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $< $(LDFLAGS)
+$(DEPS_DIR):
+	mkdir -p $(DEPS_DIR)
+
+$(DEPS): $(DEPS_DIR)
+include $(DEPS)
+
+./%.o: ./%.c $(HEADERS) $(DEPS_DIR)
+	$(CC) $(DEPENDANCY_FLAGS) $(CFLAGS) $(INCLUDES) -c -o $@ $< $(LDFLAGS)
 
 $(TARGET): $(OBJS) $(SRCS) $(HEADERS)
 	mkdir -p $(BIN_DIR)
@@ -69,6 +82,7 @@ all: $(RELEASE_TARGET) $(TARGET) $(ELFS) $(OBJS) $(SRCS) $(HEADERS)
 
 clean:
 	rm -f $(ELFS) $(OBJS)
+	rm -rf $(DEPS_DIR)
 	rm -rf $(BIN_DIR)
 
 strip: $(TARGET) $(ELFS)

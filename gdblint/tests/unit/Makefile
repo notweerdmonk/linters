@@ -23,8 +23,8 @@ ifneq ($(INCLUDE_DIR),)
 INCLUDE_DIRS += $(INCLUDE_DIR)
 endif
 
-ifeq ($(UNIT_SRC_DIR),)
-UNIT_SRC_DIR := $(shell pwd)
+ifeq ($(UNIT_TEST_SRC_DIR),)
+UNIT_TEST_SRC_DIR := $(shell pwd)
 endif
 
 ifeq ($(UNIT_TEST_BIN_DIR),)
@@ -32,7 +32,7 @@ UNIT_TEST_BIN_DIR := $(shell pwd)/bin
 endif
 
 HEADERS := $(foreach dir, $(INCLUDE_DIRS), $(wildcard $(dir)/*.h))
-SRCS := $(wildcard $(UNIT_SRC_DIR)/*.c)
+SRCS := $(wildcard $(UNIT_TEST_SRC_DIR)/*.c)
 OBJS := $(SRCS:.c=.o)
 ELFS := $(foreach obj, $(OBJS:.o=), $(UNIT_TEST_BIN_DIR)/$(notdir $(obj)))
 INCLUDES := $(foreach dir, $(INCLUDE_DIRS), -I$(dir))
@@ -51,12 +51,14 @@ STRIP_CMD = $(STRIP) $(STRIP_OPTS)
 
 .PHONY = all clean strip test format valgrind
 
+$(ELFS): $(OBJS) $(SRCS) $(HEADERS)
+
 ./%.o: ./%.c $(HEADERS)
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $< $(LDFLAGS)
 
-$(ELFS): $(OBJS) $(SRCS) $(HEADERS)
+$(UNIT_TEST_BIN_DIR)/%: $(UNIT_TEST_SRC_DIR)/%.o $(UNIT_TEST_SRC_DIR)/%.c
 	mkdir -p $(UNIT_TEST_BIN_DIR)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(OBJS) $(LDFLAGS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $< $(LDFLAGS)
 
 all: $(ELFS) $(OBJS) $(SRCS) $(HEADERS)
 

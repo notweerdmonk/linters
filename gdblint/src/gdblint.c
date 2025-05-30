@@ -182,6 +182,7 @@ struct trie_node {
   int end;
 };
 
+static
 struct trie_node*
 create_node() {
   struct trie_node* node = (struct trie_node*)malloc(sizeof(struct trie_node));
@@ -195,6 +196,7 @@ create_node() {
   return node;
 }
 
+static
 struct trie_node*
 insert_command(struct trie_node **root, char* command) {
   if (!root || !command) {
@@ -221,6 +223,7 @@ insert_command(struct trie_node **root, char* command) {
   return node;
 }
 
+static
 struct trie_node*
 find_command(struct trie_node *root, const char* command,
     char* result, size_t *len) {
@@ -251,6 +254,7 @@ find_command(struct trie_node *root, const char* command,
   return node;
 }
 
+static
 size_t
 store_trie(struct trie_node *root, FILE *fp, char *buffer, size_t buflen) {
   if (!root) {
@@ -300,6 +304,7 @@ store_trie(struct trie_node *root, FILE *fp, char *buffer, size_t buflen) {
   return len;
 }
 
+static
 size_t
 load_trie(struct trie_node **trie, FILE *fp, char* buffer,
     size_t *size) {
@@ -345,10 +350,14 @@ load_trie(struct trie_node **trie, FILE *fp, char* buffer,
   return len;
 }
 
+UNUSED
+static
 size_t serialize_trie_from_file(struct trie_node *root, FILE* file) {
   return store_trie(root, file, NULL, 0);
 }
 
+UNUSED
+static
 size_t deserialize_trie_from_file(struct trie_node *root, FILE* file) {
   return load_trie(&root, file, NULL, 0);
 }
@@ -390,6 +399,7 @@ struct progdata {
 
 /* Safe functions */
 
+static
 char* indexn(const char *str, size_t len, const int c) {
   if (!str || !len) {
     return NULL;
@@ -405,6 +415,7 @@ char* indexn(const char *str, size_t len, const int c) {
   return len && str && *str ? (char*)str : NULL;
 }
 
+static
 char* strntok(char *str, size_t len, const char* delim, size_t dlen) {
   static char *start = NULL;
   static size_t rem = 0;
@@ -453,6 +464,7 @@ char* strntok(char *str, size_t len, const char* delim, size_t dlen) {
   return ret;
 }
 
+static
 char* strncatn(char *dest, size_t dlen, const char *src, size_t slen) {
   if (!dest || !dlen) {
     return NULL;
@@ -481,6 +493,8 @@ char* strncatn(char *dest, size_t dlen, const char *src, size_t slen) {
   return dest;
 }
 
+UNUSED
+static
 ssize_t getline_e(char **lineptr, size_t* len, FILE *stream,
     int *local_errno) {
 
@@ -509,6 +523,7 @@ ssize_t getline_e(char **lineptr, size_t* len, FILE *stream,
   return ret;
 }
 
+static
 char* fgets_e(char* s, int size, FILE *stream, int *local_errno) {
 
   if (!size) {
@@ -532,6 +547,7 @@ char* fgets_e(char* s, int size, FILE *stream, int *local_errno) {
 /* Functions */
 
 #if 0
+static
 const char* md5sum(const char *file) {
   if (!file) {
     return NULL;
@@ -1703,6 +1719,7 @@ report_issues(struct progdata *pdata, struct args *pargs) {
   return ret;
 }
 
+static
 const char*
 set_arch(struct progdata *pdata, char *arch) {
   if (!pdata) {
@@ -1721,6 +1738,7 @@ set_arch(struct progdata *pdata, char *arch) {
   return arch;
 }
 
+static
 FILE*
 get_gdbfp(const char *gdbfile) {
   FILE *gdbfp = gdbfile ? fopen(gdbfile, "r") : stdin;
@@ -1731,38 +1749,46 @@ get_gdbfp(const char *gdbfile) {
   return gdbfp;
 }
 
+static
 FILE*
 setup_cache(bool clear) {
-  static char cachefile[PATH_MAX] = "";
-  int length = snprintf(cachefile, sizeof(cachefile), "/home/%s/.cache/",
-      getenv("USER"));
-  cachefile[length] = '\0';
+  static FILE *cachefp = NULL;
+  static char cachefile[PATH_MAX] = { 0 };
 
-  if (access(cachefile, R_OK | W_OK | X_OK)) {
-    if (errno != ENOENT) {
-      err("access failed for path: %s error: %s\n", cachefile, strerror(errno));
-      exit(EXIT_FAILURE);
+  if (*cachefile == 0) {
+    int length = snprintf(cachefile, sizeof(cachefile), "/home/%s/.cache/",
+        getenv("USER"));
+
+    if (access(cachefile, R_OK | W_OK | X_OK)) {
+      if (errno != ENOENT) {
+        err("access failed for path: %s error: %s\n", cachefile, strerror(errno));
+        exit(EXIT_FAILURE);
+      }
+      if (mkdir(cachefile, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) {
+        err("mkdir failed for path: %s error: %s\n", cachefile, strerror(errno));
+        exit(EXIT_FAILURE);
+      }
     }
-    if (mkdir(cachefile, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) {
-      err("mkdir failed for path: %s error: %s\n", cachefile, strerror(errno));
-      exit(EXIT_FAILURE);
-    }
+
+    snprintf(cachefile, sizeof(cachefile) - length, "%s", progname(NULL));
   }
 
-  length = snprintf(cachefile, sizeof(cachefile) - length, "%s", progname(NULL));
-
   if (clear) {
-    if (remove(cachefile)) {
+    if (remove(cachefile) && errno != ENOENT) {
       err("remove failed for path: %s error: %s\n", cachefile, strerror(errno));
       exit(EXIT_FAILURE);
     }
 
     printf("Definitions and commands cache has been removed\n");
 
-    exit(EXIT_SUCCESS);
+    return cachefp = NULL;
   }
 
-  FILE *cachefp = fopen(cachefile, "r+");
+  if (cachefp) {
+    return cachefp;
+  }
+
+  cachefp = fopen(cachefile, "r+");
   if (!cachefp && errno == ENOENT) {
     cachefp = fopen(cachefile, "w+");
   }
@@ -1774,6 +1800,7 @@ setup_cache(bool clear) {
   return cachefp;
 }
 
+static
 bool
 load_gdb_data(struct progdata *pdata, char *arch, bool list) {
   if (!pdata) {
@@ -1806,6 +1833,7 @@ load_gdb_data(struct progdata *pdata, char *arch, bool list) {
   return (loaded = load_gdb_registers(pdata, arch));
 }
 
+static
 size_t
 store_maps(struct progdata *pdata, FILE *fp, size_t *pndefs, size_t *pnrefs,
     size_t *pncmds) {
@@ -1838,6 +1866,7 @@ store_maps(struct progdata *pdata, FILE *fp, size_t *pndefs, size_t *pnrefs,
   return nstore;
 }
 
+static
 size_t
 load_maps(struct progdata *pdata, FILE *fp, size_t ndefs, size_t nrefs,
     size_t ncmds UNUSED) {
