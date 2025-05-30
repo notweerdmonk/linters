@@ -33,7 +33,7 @@
   } while(0)
 
 int main() {
-  FILE *cachefp = 0xcafebabe;
+  FILE *cachefp = (FILE*)0xcafebabe;
 
   /* Test clearing the cache */
   TEST_CASE(
