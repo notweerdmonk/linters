@@ -17,7 +17,7 @@
  * along with gdblint.  If not, see <https://www.gnu.org/licenses/>.
  */
 /**
- * @file hashmap.c
+ * @file setup_cache.c
  * @brief Unit test for hashmap
  */
 
@@ -33,7 +33,14 @@
   } while(0)
 
 int main() {
-  FILE *cachefp = setup_cache(1);
+  FILE *cachefp = 0xcafebabe;
+
+  /* Test clearing the cache */
+  TEST_CASE(
+      "Clear cache",
+      (cachefp = setup_cache(1)) == NULL,
+      "Could not clear cache"
+    );
 
   /* Test setting up the cache */
   TEST_CASE(
@@ -51,9 +58,9 @@ int main() {
 
   /* Test clearing the cache */
   TEST_CASE(
-      "Clear the cache and recreate it",
+      "Clear the cache",
       setup_cache(1) == NULL,
-      "Could not clear cache or recreate it"
+      "Could not clear cache"
     );
 
   return 0;
