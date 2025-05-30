@@ -603,10 +603,7 @@ inline
 const char*
 progname(const char *name) {
   static const char *__progname = NULL;
-  if (name) {
-    __progname = name;
-  }
-  return __progname;
+  return name ? (__progname = name) : __progname;
 }
 
 /* Hash map */
@@ -984,7 +981,6 @@ load_gdb_arch(size_t n, char archlist[n][ARCH_LEN]) {
     return false;
   }
 
-  //char buffer[MAX_LEN];
   size_t buflen = sizeof(char) * MAX_LEN;
   char *buffer = (char*)malloc(buflen);
   if (!buffer) {
@@ -1015,7 +1011,7 @@ load_gdb_arch(size_t n, char archlist[n][ARCH_LEN]) {
     err("getline failed: error: %s\n", strerror(errno));
   }
 
-  free(buffer);
+  buffer && (free(buffer), 1);
   pclose(fp);
 
   return i == 0 ? false : true;
@@ -1047,7 +1043,6 @@ load_gdb_registers(struct progdata *pdata, const char *arch) {
     return false;
   }
 
-  //char buffer[MAX_LEN];
   size_t buflen = sizeof(char) * MAX_LEN;
   char *buffer = (char*)malloc(buflen);
   if (!buffer) {
@@ -1082,7 +1077,7 @@ load_gdb_registers(struct progdata *pdata, const char *arch) {
 
   bool ret = !feof(fp) ? false : true;
 
-  free(buffer);
+  buffer && (free(buffer), 1);
   pclose(fp);
 
   return ret;
@@ -1101,7 +1096,6 @@ load_gdb_commands(struct progdata *pdata) {
     return false;
   }
 
-  //char buffer[MAX_LEN];
   size_t buflen = sizeof(char) * MAX_LEN;
   char *buffer = (char*)malloc(buflen);
   if (!buffer) {
@@ -1161,7 +1155,7 @@ load_gdb_commands(struct progdata *pdata) {
 
   bool ret = !feof(fp) ? false : true;
 
-  free(buffer);
+  buffer && (free(buffer), 1);
   pclose(fp);
 
   //insert_symbol(&pdata->defs, "silent", 0, FUNC);
@@ -1183,7 +1177,6 @@ load_gdb_convenience_vars(struct progdata *pdata) {
     return false;
   }
 
-  //char buffer[MAX_LEN];
   size_t buflen = sizeof(char) * MAX_LEN;
   char *buffer = (char*)malloc(buflen);
   if (!buffer) {
@@ -1215,7 +1208,7 @@ load_gdb_convenience_vars(struct progdata *pdata) {
 
   bool ret = !feof(fp) ? false : true;
 
-  free(buffer);
+  buffer && (free(buffer), 1);
   pclose(fp);
 
   /* Other convenience variables */
@@ -1405,7 +1398,6 @@ parse_gdbfile(struct progdata *pdata, FILE *fp) {
     return;
   }
 
-  //char buffer[MAX_LEN];
   size_t buflen = sizeof(char) * MAX_LEN;
   char *buffer = (char*)malloc(buflen);
   if (!buffer) {
@@ -1444,7 +1436,7 @@ parse_gdbfile(struct progdata *pdata, FILE *fp) {
     err("getline failed: error: %s\n", strerror(errno));
   }
 
-  free(buffer);
+  buffer && (free(buffer), 1);
 
   calc_linenum_width(pdata);
 }
@@ -2078,7 +2070,7 @@ main(int argc, char *argv[]) {
 
     //loaded = (load_maps(&data, cachefp) > 0);
 
-    //free(buffer);
+    //buffer && (free(buffer), 1);
   }
   /***********************************/
 
