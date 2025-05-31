@@ -38,7 +38,10 @@
 /* Convenience */
 
 /* Mark a function or variable or function parameter as unused */
-#define UNUSED __attribute__(( unused ))
+#define UNUSED __attribute__((unused))
+
+/* Set the cleanup function for a variable */
+#define CLEANUP(f) __attribute__((cleanup (f)))
 
 /* Logstuff */
 
@@ -708,6 +711,20 @@ destroy_map(struct hash_map *map) {
 
 static
 void
+destroy_tree(struct trie_node *root) {
+  if (!root) {
+    return;
+  }
+
+  for (size_t i = 0; i < sizeof(root->children)/sizeof(root->children[0]); ++i) {
+    root->children[i] && (destroy_tree(root->children[i]), 1);
+  }
+
+  free(root);
+}
+
+static
+void
 insert_symbol(struct hash_map *map, const char *name, size_t linenum,
     enum symbol_type type) {
 
@@ -930,6 +947,17 @@ load_map(struct hash_map *map, const char *mapname, size_t mapname_len,
 
   dbg("ret n: %lu\n", n);
   return n;
+}
+
+static
+void destroy_progdata(struct progdata *pdata) {
+  if (!pdata) {
+    return;
+  }
+
+  destroy_map(&pdata->defs);
+  destroy_map(&pdata->refs);
+  destroy_tree(pdata->cmds);
 }
 
 static
@@ -2042,7 +2070,7 @@ parse_args(int argc, char *argv[], struct progdata *pdata, struct args *pargs) {
 int
 main(int argc, char *argv[]) {
   struct args args = { 0 };
-  struct progdata data = { 0 };
+  struct progdata CLEANUP(destroy_progdata) data = { 0 };
 
   progname(basename(argv[0]));
 

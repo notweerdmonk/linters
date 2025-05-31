@@ -98,7 +98,7 @@ VALGRIND := $(shell command -v valgrind 2>/dev/null)
 valgrind: $(VALGRIND)
 	@if [ -z "$(VALGRIND)" ]; then echo "valgrind not found"; exit 1; fi
 	@if [ -z "$(exe)" ]; then echo "GDB script file not provided. Use \"$(MAKE) $@ exe=<path> gdbfile=<path>\""; exit 1; fi
-	@echo $(shell $(VALGRIND) -s \
+	@$(shell $(VALGRIND) -s \
 		--leak-check=full \
 		--show-leak-kinds=all \
 		--track-origins=yes \

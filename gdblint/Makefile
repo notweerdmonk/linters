@@ -130,7 +130,7 @@ test: $(TARGET) $(exe) $(testexe)
 format:
 	$(MAKE) -C $(SRC_DIR) format
 
-valgrind: $(VALGRIND) $(GDBLINT)
+valgrind: $(TARGET)
 	$(MAKE) -C $(SRC_DIR) valgrind
 
 BIN_TARGET := $(notdir $(TARGET))
