@@ -19,6 +19,9 @@ jobs:
     - name: install gdb
       run: sudo apt install -y gdb
 
+    - name: install valgrind
+      run: sudo apt install -y valgrind
+
     - name: make
       run: make
 
