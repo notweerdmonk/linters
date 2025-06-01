@@ -108,3 +108,4 @@ valgrind: $(VALGRIND)
 		$(gdbfile) 1>&2)
 	@$(eval retcode=$(.SHELLSTATUS))
 	@echo make valgrind: $(notdir $(exe)) exited with code ${retcode}
+	@exit $(retcode)

@@ -22,6 +22,17 @@ jobs:
     - name: make
       run: make
 
+    - name: run valgrind
+      run: |
+        set +e
+        retcode=0
+        for testfile in "$(pwd)"/tests/testscript_*
+        do
+          gdbfile="${testfile}" make valgrind
+          retcode=$(("${retcode}" & $?))
+        done
+        exit "${retcode}"
+
     - name: run unit tests
       run: make run-unit-tests
 
