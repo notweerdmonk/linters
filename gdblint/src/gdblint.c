@@ -526,6 +526,9 @@ ssize_t getline_e(char **lineptr, size_t* len, FILE *stream,
   return ret;
 }
 
+#if (_POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE))
+UNUSED
+#endif
 static
 char* fgets_e(char* s, int size, FILE *stream, int *local_errno) {
 
@@ -982,31 +985,28 @@ get_system_arch(char *hint) {
 
 static
 char*
-parse_gdb_output(char *ptr_arg, const char *delim) {
+parse_gdb_output(char *ptr_arg, size_t len, const char *delim) {
   if (!ptr_arg) {
     return NULL;
   }
 
   static int state = 0;
-
   static char *ptr = NULL;
 
-  size_t len = strlen(ptr_arg);
   switch (state) { case 0:
 
-  ptr = strntok(ptr_arg, len, delim, strlen(delim));
-  do {
-    while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n') {
-      ++ptr;
+    for (
+        ptr = strntok(ptr_arg, len, delim, strlen(delim));
+        ptr && !(*ptr == '-' && *(ptr + 1) == '-');
+        ptr = strntok(NULL, len, delim, strlen(delim))
+    ) {
+      for (; ptr && (*ptr == ' ' || *ptr == '\t' || *ptr == '\n'); ++ptr);
+      if (!ptr || *ptr == '\0') {
+        continue;
+      }
+      state = __LINE__; return ptr; case __LINE__: ;
     }
-    if (!ptr || !*ptr) {
-      continue;
-    }
-    state = __LINE__; return ptr; case __LINE__: ;
-  }
-  while ((ptr = strntok(NULL, len, delim, strlen(delim))) != NULL && !(*ptr == '-' &&
-         *(ptr + 1) == '-'));
-
+      
   }
 
   state = 0; return NULL;
@@ -1032,10 +1032,10 @@ load_gdb_arch(size_t n, char archlist[n][ARCH_LEN]) {
   }
 
   size_t i = 0;
-  ssize_t nread = 0;
   int localerrno = 0;
 
-#if 0 && (_POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE))
+#if (_POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE))
+  ssize_t nread = 0;
   while ((nread = getline_e(&buffer, &buflen, fp, &localerrno)) > 0) {
 #else
   while (fgets_e(buffer, buflen, fp, &localerrno) && i < n) {
@@ -1045,13 +1045,22 @@ load_gdb_arch(size_t n, char archlist[n][ARCH_LEN]) {
       continue;
     }
 
-    ptr += strlen("Valid arguments are ");
+    ptr += sizeof("Valid arguments are ");
 
-    while ((ptr = parse_gdb_output(ptr, "., ")) && i < n) {
+#if (_POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE))
+    while ((ptr = parse_gdb_output(ptr, nread, "., ")) && i < n) {
+#else
+    while ((ptr = parse_gdb_output(ptr, strlen(ptr), "., ")) && i < n) {
+#endif
       strncpy(archlist[i++], ptr, sizeof(archlist[0]));
     }
   }
-  if (nread < 0 && localerrno != 0) {
+  if (
+#if (_POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE))
+      nread < 0 &&
+#endif
+      localerrno != 0
+  ) {
     err("getline failed: error: %s\n", strerror(errno));
   }
 
@@ -1095,7 +1104,7 @@ load_gdb_registers(struct progdata *pdata, const char *arch) {
   ssize_t nread = 0;
   int localerrno = 0;
 
-#if 0 && (_POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE))
+#if (_POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE))
   while ((nread = getline_e(&buffer, &buflen, fp, &localerrno)) > 0) {
 #else
   while (fgets_e(buffer, buflen, fp, &localerrno)) {
@@ -1148,7 +1157,7 @@ load_gdb_commands(struct progdata *pdata) {
   ssize_t nread = 0;
   int localerrno = 0;
 
-#if 0 && (_POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE))
+#if (_POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE))
   while ((nread = getline_e(&buffer, &buflen, fp, &localerrno)) > 0) {
 #else
   while (fgets_e(buffer, buflen, fp, &localerrno)) {
@@ -1174,7 +1183,11 @@ load_gdb_commands(struct progdata *pdata) {
         }
 
       } else {
-        while ((ptr = parse_gdb_output(buffer, ","))) {
+#if 0 && (_POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE))
+        while ((ptr = parse_gdb_output(buffer, nread, ","))) {
+#else
+        while ((ptr = parse_gdb_output(buffer, strlen(buffer), ","))) {
+#endif
           char *space = index(ptr, ' ');
           if (space) {
             *space = '\0';
@@ -1229,7 +1242,7 @@ load_gdb_convenience_vars(struct progdata *pdata) {
   ssize_t nread = 0;
   int localerrno = 0;
 
-#if 0 && (_POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE))
+#if (_POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE))
   while ((nread = getline_e(&buffer, &buflen, fp, &localerrno)) > 0) {
 #else
   while (fgets_e(buffer, buflen, fp, &localerrno)) {
@@ -1452,7 +1465,7 @@ parse_gdbfile(struct progdata *pdata, FILE *fp) {
   ssize_t nread = 0;
   int localerrno = 0;
 
-#if 0 && (_POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE))
+#if (_POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE))
   while ((nread = getline_e(&buffer, &buflen, fp, &localerrno)) > 0) {
     size_t len = nread;
 #else
