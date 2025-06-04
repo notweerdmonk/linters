@@ -985,7 +985,7 @@ get_system_arch(char *hint) {
 
 static
 char*
-parse_gdb_output(char *ptr_arg, size_t len, const char *delim) {
+parse_gdb_output(char *ptr_arg, size_t len, const char *delim, size_t delimlen) {
   if (!ptr_arg) {
     return NULL;
   }
@@ -996,9 +996,9 @@ parse_gdb_output(char *ptr_arg, size_t len, const char *delim) {
   switch (state) { case 0:
 
     for (
-        ptr = strntok(ptr_arg, len, delim, strlen(delim));
+        ptr = strntok(ptr_arg, len, delim, delimlen);
         ptr && !(*ptr == '-' && *(ptr + 1) == '-');
-        ptr = strntok(NULL, len, delim, strlen(delim))
+        ptr = strntok(NULL, len, delim, delimlen)
     ) {
       for (; ptr && (*ptr == ' ' || *ptr == '\t' || *ptr == '\n'); ++ptr);
       if (!ptr || *ptr == '\0') {
@@ -1045,12 +1045,18 @@ load_gdb_arch(size_t n, char archlist[n][ARCH_LEN]) {
       continue;
     }
 
-    ptr += sizeof("Valid arguments are ");
+    ptr += sizeof("Valid arguments are ") - 1;
 
 #if (_POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE))
-    while ((ptr = parse_gdb_output(ptr, nread, "., ")) && i < n) {
+    while (
+        (ptr = parse_gdb_output(ptr, nread, "., ", sizeof("., ") - 1)) &&
+        i < n
+      ) {
 #else
-    while ((ptr = parse_gdb_output(ptr, strlen(ptr), "., ")) && i < n) {
+    while (
+        (ptr = parse_gdb_output(ptr, strlen(ptr), "., ", sizeof("., ") - 1)) &&
+        i < n
+      ) {
 #endif
       strncpy(archlist[i++], ptr, sizeof(archlist[0]));
     }
@@ -1183,10 +1189,12 @@ load_gdb_commands(struct progdata *pdata) {
         }
 
       } else {
-#if 0 && (_POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE))
-        while ((ptr = parse_gdb_output(buffer, nread, ","))) {
+#if (_POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE))
+        while ((ptr = parse_gdb_output(buffer, nread, ",", sizeof(",") - 1))) {
 #else
-        while ((ptr = parse_gdb_output(buffer, strlen(buffer), ","))) {
+        while (
+            (ptr = parse_gdb_output(buffer, strlen(buffer), ",", sizeof(",") - 1))
+          ) {
 #endif
           char *space = index(ptr, ' ');
           if (space) {
@@ -1886,12 +1894,12 @@ store_maps(struct progdata *pdata, FILE *fp, size_t *pndefs, size_t *pnrefs,
   size_t ndefs = 0, nrefs = 0, ncmds = 0;
 
   size_t nstore =
-    (ndefs = store_map(&pdata->defs, "defs", sizeof("defs"), fp, NULL, 0));
+    (ndefs = store_map(&pdata->defs, "defs", sizeof("defs") - 1, fp, NULL, 0));
   dbg("nstore: %lu\n", nstore);
   (void)(pndefs && (*pndefs = ndefs));
 
   nstore +=
-    (nrefs = store_map(&pdata->refs, "refs", sizeof("refs"), fp, NULL, 0));
+    (nrefs = store_map(&pdata->refs, "refs", sizeof("refs") - 1, fp, NULL, 0));
   dbg("nstore: %lu\n", nstore);
   (void)(pnrefs && (*pnrefs = nrefs));
 
@@ -1917,13 +1925,13 @@ load_maps(struct progdata *pdata, FILE *fp, size_t ndefs, size_t nrefs,
   }
 
   size_t nload =
-    load_map(&pdata->defs, "defs", sizeof("defs"), fp, NULL, ndefs);
+    load_map(&pdata->defs, "defs", sizeof("defs") - 1, fp, NULL, ndefs);
   dbg("nload: %lu\n", nload);
 
-  nload += load_map(&pdata->refs, "refs", sizeof("refs"), fp, NULL, nrefs);
+  nload += load_map(&pdata->refs, "refs", sizeof("refs") - 1, fp, NULL, nrefs);
   dbg("nload: %lu\n", nload);
 
-  //nload += load_map(&pdata->cmds, "cmds", sizeof("cmds"), fp, NULL, ncmds);
+  //nload += load_map(&pdata->cmds, "cmds", sizeof("cmds") - 1, fp, NULL, ncmds);
   //dbg("nload: %lu\n", nload);
 
   return nload;
