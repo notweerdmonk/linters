@@ -1804,34 +1804,42 @@ setup_cache(bool clear) {
   static FILE *cachefp = NULL;
   static char cachefile[PATH_MAX] = { 0 };
 
-  if (*cachefile == 0) {
+  do {
+    if (*cachefile) {
+      break;
+    }
+
     int length = snprintf(cachefile, sizeof(cachefile), "/home/%s/.cache/",
         getenv("USER"));
 
-    if (access(cachefile, R_OK | W_OK | X_OK)) {
-      if (errno != ENOENT) {
-        err("access failed for path: %s error: %s\n", cachefile, strerror(errno));
-        exit(EXIT_FAILURE);
-      }
-      if (mkdir(cachefile, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) {
-        err("mkdir failed for path: %s error: %s\n", cachefile, strerror(errno));
-        exit(EXIT_FAILURE);
-      }
+    if (!access(cachefile, R_OK | W_OK | X_OK)) {
+      snprintf(cachefile, sizeof(cachefile) - length, "%s", progname(NULL));
+      break;
     }
 
-    snprintf(cachefile, sizeof(cachefile) - length, "%s", progname(NULL));
-  }
+    if (errno != ENOENT) {
+      err("access failed for path: %s error: %s\n", cachefile, strerror(errno));
+      return NULL;
+    }
+    if (mkdir(cachefile, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) {
+      err("mkdir failed for path: %s error: %s\n", cachefile, strerror(errno));
+      return NULL;
+    }
 
-  if (clear) {
+    if (!clear) {
+      break;
+    }
+
     if (remove(cachefile) && errno != ENOENT) {
       err("remove failed for path: %s error: %s\n", cachefile, strerror(errno));
-      exit(EXIT_FAILURE);
+      return NULL;
     }
 
     printf("Definitions and commands cache has been removed\n");
 
     return cachefp = NULL;
-  }
+
+  } while (0);
 
   if (cachefp) {
     return cachefp;
